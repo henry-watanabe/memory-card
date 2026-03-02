@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>カード記憶ゲーム</title>
+<style>
+body {
+  margin: 0;
+  font-family: "Arial", sans-serif;
+  background: #fdf6e3;
+  text-align: center;
+}
+
+h1 {
+  margin-top: 10px;
+}
+
+#controls {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+
+.judgeBtn {
+  font-size: 24px;
+  padding: 10px 25px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+#correctBtn { background-color: #ff9999; }
+#wrongBtn { background-color: #99ccff; }
+#peekBtn { background-color: #ffff99; }
+
+#score {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+#message {
+  font-size: 20px;
+  margin: 10px;
+  font-weight: bold;
+}
+
+#game {
+  display: grid;
+  grid-template-columns: repeat(5, 120px);
+  gap: 15px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.card {
+  width: 120px;
+  height: 120px;
+  border-radius: 15px;
+  border: 4px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  background: white;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.2s;
+}
+
+.card.selected {
+  border: 4px solid red;
+  transform: scale(1.05);
+}
+
+.card.back {
+  background-color: white;
+  background-image: url("アンパンマン.jpg");
+  background-size: 80%;
+  background-repeat: no-repeat;
+  background-position: center;
+  font-size: 0;
+}
+
+@keyframes celebrate {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.2) rotate(5deg); }
+  50% { transform: scale(1.2) rotate(-5deg); }
+  75% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.card.cleared {
+  animation: celebrate 0.6s ease-in-out;
+}
+</style>
+</head>
+<body>
+
+<h1>カードの場所をおぼえよう！</h1>
+<div id="controls">
+  <button id="correctBtn" class="judgeBtn">〇</button>
+  <button id="wrongBtn" class="judgeBtn">×</button>
+  <button id="peekBtn" class="judgeBtn">👀</button>
+  <div id="score">正解数：0</div>
+</div>
+<div id="message">何かキーを押すとスタート！</div>
+<div id="game"></div>
+
+<script>
+const items = [
+  "🍎","🍊","🍇","🍒","🍌","🍈","🍉","🍑",
+  "🥒","🍆","🌽","🥕",
+  "🍨","🍰","🍦"
+];
+
+const game = document.getElementById("game");
+const message = document.getElementById("message");
+const correctBtn = document.getElementById("correctBtn");
+const wrongBtn = document.getElementById("wrongBtn");
+const peekBtn = document.getElementById("peekBtn");
+const scoreDisplay = document.getElementById("score");
+
+let cards = [];
+let selectedIndex = 0;
+let started = false;
+let revealed = false;
+let correctCount = 0;
+let peeking = false;
+
+function setupGame() {
+  game.innerHTML = "";
+  cards = [];
+  selectedIndex = 0;
+  revealed = false;
+  correctCount = 0;
+  scoreDisplay.textContent = "正解数：0";
+  message.textContent = "何かキーを押すとスタート！";
+
+  items.sort(() => Math.random() - 0.5);
+
+  items.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.textContent = item;
+    game.appendChild(card);
+    cards.push(card);
+  });
+
+  updateSelection();
+  started = false;
+}
+
+setupGame();
+
+window.addEventListener("keydown", (e) => {
+  if (!started) {
+    cards.forEach(card => card.classList.add("back"));
+    message.textContent = "親が問題を言ってね！";
+    started = true;
+    return;
+  }
+
+  if (allCleared()) {
+    setupGame();
+    return;
+  }
+
+  if (e.key === "ArrowRight" && selectedIndex % 5 !== 4) selectedIndex++;
+  if (e.key === "ArrowLeft" && selectedIndex % 5 !== 0) selectedIndex--;
+  if (e.key === "ArrowDown" && selectedIndex + 5 < cards.length) selectedIndex += 5;
+  if (e.key === "ArrowUp" && selectedIndex - 5 >= 0) selectedIndex -= 5;
+
+  if (e.key === " ") {
+    e.preventDefault();
+    const card = cards[selectedIndex];
+    if (!revealed && card.classList.contains("back")) {
+      card.classList.remove("back");
+      revealed = true;
+      message.textContent = "〇か×を押してね";
+    }
+  }
+
+  updateSelection();
+});
+
+function playSound(file) {
+  const audio = new Audio(file);
+  audio.play();
+}
+
+correctBtn.addEventListener("click", () => {
+  if (revealed) {
+    playSound("正解.mp3");
+    correctCount++;
+    scoreDisplay.textContent = "正解数：" + correctCount;
+    message.textContent = "正解！";
+    revealed = false;
+    checkClear();
+  }
+});
+
+wrongBtn.addEventListener("click", () => {
+  if (revealed) {
+    playSound("不正解.mp3");
+    message.textContent = "不正解！";
+    revealed = false;
+    checkClear();
+  }
+});
+
+// 👀 ボタン押している間だけ表示
+peekBtn.addEventListener("mousedown", startPeek);
+peekBtn.addEventListener("touchstart", startPeek);
+peekBtn.addEventListener("mouseup", stopPeek);
+peekBtn.addEventListener("mouseleave", stopPeek);
+peekBtn.addEventListener("touchend", stopPeek);
+
+function startPeek() {
+  if (!started) return;
+  peeking = true;
+  cards.forEach(card => {
+    if (card.classList.contains("back")) {
+      card.classList.remove("back");
+      card.dataset.peek = "true";
+    }
+  });
+}
+
+function stopPeek() {
+  if (!peeking) return;
+  peeking = false;
+  cards.forEach(card => {
+    if (card.dataset.peek === "true") {
+      card.classList.add("back");
+      card.dataset.peek = "";
+    }
+  });
+}
+
+function updateSelection() {
+  cards.forEach(card => card.classList.remove("selected"));
+  cards[selectedIndex].classList.add("selected");
+}
+
+function allCleared() {
+  return cards.every(card => !card.classList.contains("back"));
+}
+
+function checkClear() {
+  if (allCleared()) {
+    message.textContent = "全部めくれたよ！キーを押すともう一回！";
+    cards.forEach(card => {
+      card.classList.add("cleared");
+      setTimeout(() => card.classList.remove("cleared"), 600);
+    });
+  }
+}
+</script>
+
+</body>
+</html>
