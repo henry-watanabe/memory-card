@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#fdf6e3"><meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>カード記憶ゲーム</title>
 <style>
@@ -12,21 +13,20 @@ body {
   text-align: center;
 }
 
-h1 {
-  margin-top: 10px;
-}
+h1 { margin-top: 10px; font-size: clamp(18px, 5vw, 28px); }
 
 #controls {
   margin-top: 10px;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.judgeBtn {
-  font-size: 24px;
-  padding: 10px 25px;
+.judgeBtn, select {
+  font-size: clamp(16px, 4vw, 20px);
+  padding: 8px 14px;
   border-radius: 10px;
   border: none;
   cursor: pointer;
@@ -37,35 +37,41 @@ h1 {
 #peekBtn { background-color: #ffff99; }
 
 #score {
-  font-size: 20px;
+  font-size: clamp(16px, 4vw, 20px);
   font-weight: bold;
 }
 
+#cardList {
+  margin-top: 15px;
+  font-size: clamp(20px, 6vw, 28px);
+  letter-spacing: 6px;
+}
+
 #message {
-  font-size: 20px;
+  font-size: clamp(16px, 4vw, 20px);
   margin: 10px;
   font-weight: bold;
 }
 
 #game {
   display: grid;
-  grid-template-columns: repeat(5, 120px);
-  gap: 15px;
+  gap: 3vw;
   justify-content: center;
   margin-top: 20px;
 }
 
 .card {
-  width: 120px;
-  height: 120px;
+  width: 18vw;
+  height: 18vw;
+  max-width: 120px;
+  max-height: 120px;
   border-radius: 15px;
   border: 4px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 42px;
+  font-size: clamp(22px, 6vw, 42px);
   background: white;
-  cursor: pointer;
   user-select: none;
   transition: transform 0.2s;
 }
@@ -95,25 +101,44 @@ h1 {
 .card.cleared {
   animation: celebrate 0.6s ease-in-out;
 }
+
+/* 小さいスマホ用 */
+@media (max-width: 480px) {
+  #game { gap: 4vw; }
+  .card {
+    width: 16vw;
+    height: 16vw;
+  }
+}
 </style>
 </head>
 <body>
 
 <h1>カードの場所をおぼえよう！</h1>
+
 <div id="controls">
+  <label>段数:
+    <select id="rowSelect">
+      <option value="1">1段</option>
+      <option value="2">2段</option>
+      <option value="3" selected>3段</option>
+    </select>
+  </label>
   <button id="correctBtn" class="judgeBtn">〇</button>
   <button id="wrongBtn" class="judgeBtn">×</button>
   <button id="peekBtn" class="judgeBtn">👀</button>
   <div id="score">正解数：0</div>
 </div>
-<div id="message">何かキーを押すとスタート！</div>
+
+<div id="cardList"></div>
+<div id="message">画面をタップするとスタート！</div>
 <div id="game"></div>
 
 <script>
-const items = [
-  "🍎","🍊","🍇","🍒","🍌","🍈","🍉","🍑",
-  "🥒","🍆","🌽","🥕",
-  "🍨","🍰","🍦"
+const allItems = [
+  "🍎","🍊","🍇","🍒","🍌",
+  "🍈","🍉","🍑","🥒","🍆",
+  "🌽","🥕","🍨","🍰","🍦"
 ];
 
 const game = document.getElementById("game");
@@ -122,68 +147,66 @@ const correctBtn = document.getElementById("correctBtn");
 const wrongBtn = document.getElementById("wrongBtn");
 const peekBtn = document.getElementById("peekBtn");
 const scoreDisplay = document.getElementById("score");
+const rowSelect = document.getElementById("rowSelect");
+const cardList = document.getElementById("cardList");
 
 let cards = [];
-let selectedIndex = 0;
 let started = false;
 let revealed = false;
 let correctCount = 0;
 let peeking = false;
+let currentItems = [];
+let rows = 3;
 
 function setupGame() {
+  rows = parseInt(rowSelect.value);
+  const count = rows * 5;
+
+  currentItems = [...allItems].slice(0, count); // 一覧は固定順
+
+  // 場に並べる用にシャッフルした別配列を作る
+  const shuffledItems = [...currentItems].sort(() => Math.random() - 0.5);
+
+  game.style.gridTemplateColumns = "repeat(5, 1fr)";
   game.innerHTML = "";
+  cardList.innerHTML = currentItems.join(" ");
+
   cards = [];
-  selectedIndex = 0;
   revealed = false;
   correctCount = 0;
   scoreDisplay.textContent = "正解数：0";
-  message.textContent = "何かキーを押すとスタート！";
+  message.textContent = "画面をタップするとスタート！";
 
-  items.sort(() => Math.random() - 0.5);
-
-  items.forEach((item) => {
+  shuffledItems.forEach((item) => {
     const card = document.createElement("div");
     card.className = "card";
     card.textContent = item;
+
+    card.addEventListener("click", () => {
+      if (!started) return;
+      if (!card.classList.contains("back") || revealed) return;
+      card.classList.remove("back");
+      revealed = true;
+      message.textContent = "〇か×を押してね";
+    });
+
     game.appendChild(card);
     cards.push(card);
   });
 
-  updateSelection();
   started = false;
 }
 
+rowSelect.addEventListener("change", setupGame);
 setupGame();
 
-window.addEventListener("keydown", (e) => {
+// 画面タップでスタート
+window.addEventListener("click", () => {
   if (!started) {
     cards.forEach(card => card.classList.add("back"));
     message.textContent = "親が問題を言ってね！";
     started = true;
-    return;
   }
-
-  if (allCleared()) {
-    setupGame();
-    return;
-  }
-
-  if (e.key === "ArrowRight" && selectedIndex % 5 !== 4) selectedIndex++;
-  if (e.key === "ArrowLeft" && selectedIndex % 5 !== 0) selectedIndex--;
-  if (e.key === "ArrowDown" && selectedIndex + 5 < cards.length) selectedIndex += 5;
-  if (e.key === "ArrowUp" && selectedIndex - 5 >= 0) selectedIndex -= 5;
-
-  if (e.key === " ") {
-    e.preventDefault();
-    const card = cards[selectedIndex];
-    if (!revealed && card.classList.contains("back")) {
-      card.classList.remove("back");
-      revealed = true;
-      message.textContent = "〇か×を押してね";
-    }
-  }
-
-  updateSelection();
 });
 
 function playSound(file) {
@@ -211,12 +234,10 @@ wrongBtn.addEventListener("click", () => {
   }
 });
 
-// 👀 ボタン押している間だけ表示
-peekBtn.addEventListener("mousedown", startPeek);
 peekBtn.addEventListener("touchstart", startPeek);
-peekBtn.addEventListener("mouseup", stopPeek);
-peekBtn.addEventListener("mouseleave", stopPeek);
 peekBtn.addEventListener("touchend", stopPeek);
+peekBtn.addEventListener("mousedown", startPeek);
+peekBtn.addEventListener("mouseup", stopPeek);
 
 function startPeek() {
   if (!started) return;
@@ -240,25 +261,27 @@ function stopPeek() {
   });
 }
 
-function updateSelection() {
-  cards.forEach(card => card.classList.remove("selected"));
-  cards[selectedIndex].classList.add("selected");
-}
-
 function allCleared() {
   return cards.every(card => !card.classList.contains("back"));
 }
 
 function checkClear() {
   if (allCleared()) {
-    message.textContent = "全部めくれたよ！キーを押すともう一回！";
+    message.textContent = "全部めくれたよ！画面タップでもう一回！";
     cards.forEach(card => {
       card.classList.add("cleared");
       setTimeout(() => card.classList.remove("cleared"), 600);
     });
+
+    started = false;
   }
 }
 </script>
 
 </body>
 </html>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js');
+}
+</script>
