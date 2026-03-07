@@ -225,8 +225,11 @@ rowSelect.addEventListener("change", (e) => {
 });
 setupGame();
 
-// 画面タップでスタート
-window.addEventListener("click", () => {
+// 画面タップでスタート（コントロール操作では開始しない）
+window.addEventListener("click", (e) => {
+  // プルダウンやボタン操作の場合は無視
+  if (e.target.closest("#controls")) return;
+
   if (!started) {
     cards.forEach(card => card.classList.add("back"));
     message.textContent = "親が問題を言ってね！";
@@ -303,7 +306,7 @@ function checkClear() {
 }
 </script>
 
-<div id="version">v0.4</div>
+<div id="version">v0.5</div>
 
 <style>
 #version{
