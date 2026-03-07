@@ -158,6 +158,7 @@ const rowSelect = document.getElementById("rowSelect");
 const cardList = document.getElementById("cardList");
 
 let cards = [];
+  // カード状態を完全リセット
 let started = false;
 let revealed = false;
 let correctCount = 0;
@@ -166,6 +167,8 @@ let currentItems = [];
 let rows = 3;
 
 function setupGame() {
+  // 枚数変更時は必ず「表向きの状態」にリセット
+  started = false;
   const count = parseInt(rowSelect.value);
 
   const listItems = [...allItems].slice(0, count);
@@ -209,13 +212,17 @@ function setupGame() {
     });
 
     game.appendChild(card);
+    // 初期状態は表向き（backクラスを付けない）
     cards.push(card);
   });
 
   started = false;
 }
 
-rowSelect.addEventListener("change", setupGame);
+rowSelect.addEventListener("change", (e) => {
+  e.stopPropagation(); // 枚数変更時にスタートイベントが発火しないようにする
+  setupGame();
+});
 setupGame();
 
 // 画面タップでスタート
@@ -296,7 +303,7 @@ function checkClear() {
 }
 </script>
 
-<div id="version">v0.3</div>
+<div id="version">v0.4</div>
 
 <style>
 #version{
