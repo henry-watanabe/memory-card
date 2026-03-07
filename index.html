@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#fdf6e3"><meta charset="UTF-8" />
+<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>カード記憶ゲーム</title>
 <style>
@@ -25,6 +24,7 @@ h1 { margin-top: 10px; font-size: clamp(18px, 5vw, 28px); }
 }
 
 .judgeBtn, select {
+  min-height: 48px; /* 子供でも押しやすい */
   font-size: clamp(16px, 4vw, 20px);
   padding: 8px 14px;
   border-radius: 10px;
@@ -55,25 +55,29 @@ h1 { margin-top: 10px; font-size: clamp(18px, 5vw, 28px); }
 
 #game {
   display: grid;
-  gap: 3vw;
+  /* カードサイズを基準に自動レイアウト（スマホで大きくなる） */
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 4vw;
   justify-content: center;
-  margin-top: 20px;
+  margin: 20px auto;
+  max-width: 520px; /* タブレット以上で広がりすぎない */
+  padding: 0 10px;
 }
 
 .card {
-  width: 18vw;
-  height: 18vw;
-  max-width: 120px;
-  max-height: 120px;
-  border-radius: 15px;
+  width: 100%;
+  aspect-ratio: 1 / 1; /* 常に正方形 */
+  min-width: 80px; /* 子供でも押しやすいサイズ */
+  border-radius: 18px;
   border: 4px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(22px, 6vw, 42px);
+  font-size: clamp(28px, 7vw, 42px);
   background: white;
   user-select: none;
-  transition: transform 0.2s;
+  transition: transform 0.15s;
+  touch-action: manipulation; /* タップ反応改善 */
 }
 
 .card.selected {
@@ -280,8 +284,3 @@ function checkClear() {
 
 </body>
 </html>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js');
-}
-</script>
