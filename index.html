@@ -121,11 +121,14 @@ h1 { margin-top: 10px; font-size: clamp(18px, 5vw, 28px); }
 <h1>カードの場所をおぼえよう！</h1>
 
 <div id="controls">
-  <label>段数:
+  <label>枚数:
     <select id="rowSelect">
-      <option value="1">1段</option>
-      <option value="2">2段</option>
-      <option value="3" selected>3段</option>
+      <option value="4">4枚</option>
+      <option value="6">6枚</option>
+      <option value="8">8枚</option>
+      <option value="10" selected>10枚</option>
+      <option value="12">12枚</option>
+      <option value="15">15枚</option>
     </select>
   </label>
   <button id="correctBtn" class="judgeBtn">〇</button>
@@ -163,17 +166,28 @@ let currentItems = [];
 let rows = 3;
 
 function setupGame() {
-  rows = parseInt(rowSelect.value);
-  const count = rows * 5;
+  const count = parseInt(rowSelect.value);
 
-  currentItems = [...allItems].slice(0, count); // 一覧は固定順
+  const listItems = [...allItems].slice(0, count);
+
+  // 表示一覧は固定順
+  currentItems = [...listItems]; // 一覧は固定順
 
   // 場に並べる用にシャッフルした別配列を作る
   const shuffledItems = [...currentItems].sort(() => Math.random() - 0.5);
 
-  game.style.gridTemplateColumns = "repeat(5, 1fr)";
+  // カード枚数から自動でグリッド計算（スクロールが出ないようにする）
+  const columns = Math.ceil(Math.sqrt(count));
+  const rows = Math.ceil(count / columns);
+
+  game.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+  game.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+  // 画面に収まる最大サイズ
+  const availableHeight = window.innerHeight - 220;
+  game.style.maxHeight = availableHeight + "px";
   game.innerHTML = "";
-  cardList.innerHTML = currentItems.join(" ");
+  cardList.innerHTML = listItems.join(" ");
 
   cards = [];
   revealed = false;
@@ -282,7 +296,7 @@ function checkClear() {
 }
 </script>
 
-<div id="version">v0.2</div>
+<div id="version">v0.3</div>
 
 <style>
 #version{
